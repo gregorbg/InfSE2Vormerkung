@@ -2,6 +2,7 @@ package de.uni_hamburg.informatik.swt.se2.mediathek.werkzeuge.vormerken;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JPanel;
@@ -12,6 +13,7 @@ import de.uni_hamburg.informatik.swt.se2.mediathek.services.ServiceObserver;
 import de.uni_hamburg.informatik.swt.se2.mediathek.services.kundenstamm.KundenstammService;
 import de.uni_hamburg.informatik.swt.se2.mediathek.services.medienbestand.MedienbestandService;
 import de.uni_hamburg.informatik.swt.se2.mediathek.services.verleih.VerleihService;
+import de.uni_hamburg.informatik.swt.se2.mediathek.services.vormerkung.VormerkService;
 import de.uni_hamburg.informatik.swt.se2.mediathek.werkzeuge.SubWerkzeugObserver;
 import de.uni_hamburg.informatik.swt.se2.mediathek.werkzeuge.subwerkzeuge.kundenauflister.KundenauflisterWerkzeug;
 import de.uni_hamburg.informatik.swt.se2.mediathek.werkzeuge.subwerkzeuge.kundendetailanzeiger.KundenDetailAnzeigerWerkzeug;
@@ -37,6 +39,8 @@ public class VormerkWerkzeug
      * Der Service zum Ausleihen von Medien.
      */
     private final VerleihService _verleihService;
+
+    private final VormerkService _vormerkService;
 
     /**
      * Das Sub-Werkzeug zum Darstellen und Selektieren der Kunden.
@@ -72,18 +76,19 @@ public class VormerkWerkzeug
      * @require verleihService != null
      */
     public VormerkWerkzeug(MedienbestandService medienbestand,
-            KundenstammService kundenstamm, VerleihService verleihService)
+            KundenstammService kundenstamm, VerleihService verleihService, VormerkService vormerkService)
     {
         assert medienbestand != null : "Vorbedingung verletzt: medienbestand != null";
         assert kundenstamm != null : "Vorbedingung verletzt: kundenstamm != null";
         assert verleihService != null : "Vorbedingung verletzt: verleihService != null";
 
         _verleihService = verleihService;
+        _vormerkService = vormerkService;
 
         // Subwerkzeuge erstellen
         _kundenAuflisterWerkzeug = new KundenauflisterWerkzeug(kundenstamm);
         _medienAuflisterWerkzeug = new VormerkMedienauflisterWerkzeug(
-                medienbestand, verleihService);
+                medienbestand, verleihService, vormerkService);
         _medienDetailAnzeigerWerkzeug = new MedienDetailAnzeigerWerkzeug();
         _kundenDetailAnzeigerWerkzeug = new KundenDetailAnzeigerWerkzeug();
 
@@ -209,10 +214,24 @@ public class VormerkWerkzeug
     {
         List<Medium> medien = _medienAuflisterWerkzeug.getSelectedMedien();
         Kunde kunde = _kundenAuflisterWerkzeug.getSelectedKunde();
-        // TODO für Aufgabenblatt 6 (nicht löschen): Prüfung muss noch eingebaut
+        // DONE für Aufgabenblatt 6 (nicht löschen): Prüfung muss noch eingebaut
         // werden. Ist dies korrekt imlpementiert, wird der Vormerk-Button gemäß
         // der Anforderungen a), b), c) und e) aktiviert.
-        boolean vormerkenMoeglich = (kunde != null) && !medien.isEmpty();
+
+        boolean vormerkerVoll = false;
+        List<Kunde> alleAusleiher = new ArrayList<>();
+
+        for (Medium medium : medien)
+        {
+            int anzahlVormerker = _vormerkService.getVormerkerFuer(medium).size();
+            vormerkerVoll |= anzahlVormerker > 3;
+
+            boolean istVerliehen = _verleihService.istVerliehen(medium);
+            Kunde ausleiher = istVerliehen ? _verleihService.getEntleiherFuer(medium) : null;
+            if (ausleiher != null) alleAusleiher.add(ausleiher);
+        }
+
+        boolean vormerkenMoeglich = (kunde != null) && !alleAusleiher.contains(kunde) && !medien.isEmpty() && !vormerkerVoll;
 
         return vormerkenMoeglich;
     }
@@ -228,8 +247,9 @@ public class VormerkWerkzeug
         List<Medium> selectedMedien = _medienAuflisterWerkzeug
             .getSelectedMedien();
         Kunde selectedKunde = _kundenAuflisterWerkzeug.getSelectedKunde();
-        // TODO für Aufgabenblatt 6 (nicht löschen): Vormerken einbauen
+        // DONE für Aufgabenblatt 6 (nicht löschen): Vormerken einbauen
 
+        _vormerkService.merkeVor(selectedKunde, selectedMedien);
     }
 
     /**

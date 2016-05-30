@@ -3,6 +3,7 @@ package de.uni_hamburg.informatik.swt.se2.mediathek.werkzeuge.ausleihe;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
+import java.util.Queue;
 
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -15,6 +16,7 @@ import de.uni_hamburg.informatik.swt.se2.mediathek.services.kundenstamm.Kundenst
 import de.uni_hamburg.informatik.swt.se2.mediathek.services.medienbestand.MedienbestandService;
 import de.uni_hamburg.informatik.swt.se2.mediathek.services.verleih.ProtokollierException;
 import de.uni_hamburg.informatik.swt.se2.mediathek.services.verleih.VerleihService;
+import de.uni_hamburg.informatik.swt.se2.mediathek.services.vormerkung.VormerkService;
 import de.uni_hamburg.informatik.swt.se2.mediathek.werkzeuge.SubWerkzeugObserver;
 import de.uni_hamburg.informatik.swt.se2.mediathek.werkzeuge.subwerkzeuge.ausleihemedienauflister.AusleiheMedienauflisterWerkzeug;
 import de.uni_hamburg.informatik.swt.se2.mediathek.werkzeuge.subwerkzeuge.kundenauflister.KundenauflisterWerkzeug;
@@ -40,6 +42,8 @@ public class AusleihWerkzeug
      * Der Service zum Ausleihen von Medien.
      */
     private final VerleihService _verleihService;
+
+    private final VormerkService _vormerkService;
 
     /**
      * Das Sub-Werkzeug zum darstellen und selektieren der Kunden.
@@ -75,18 +79,19 @@ public class AusleihWerkzeug
      * @require verleihService != null
      */
     public AusleihWerkzeug(MedienbestandService medienbestand,
-            KundenstammService kundenstamm, VerleihService verleihService)
+            KundenstammService kundenstamm, VerleihService verleihService, VormerkService vormerkService)
     {
         assert medienbestand != null : "Vorbedingung verletzt: medienbestand != null";
         assert kundenstamm != null : "Vorbedingung verletzt: kundenstamm != null";
         assert verleihService != null : "Vorbedingung verletzt: verleihService != null";
 
         _verleihService = verleihService;
+        _vormerkService = vormerkService;
 
         // Subwerkzeuge erstellen
         _kundenAuflisterWerkzeug = new KundenauflisterWerkzeug(kundenstamm);
         _medienAuflisterWerkzeug = new AusleiheMedienauflisterWerkzeug(
-                medienbestand, verleihService);
+                medienbestand, verleihService, vormerkService);
         _medienDetailAnzeigerWerkzeug = new MedienDetailAnzeigerWerkzeug();
         _kundenDetailAnzeigerWerkzeug = new KundenDetailAnzeigerWerkzeug();
 
@@ -212,13 +217,21 @@ public class AusleihWerkzeug
     {
         List<Medium> medien = _medienAuflisterWerkzeug.getSelectedMedien();
         Kunde kunde = _kundenAuflisterWerkzeug.getSelectedKunde();
-        // TODO für Aufgabenblatt 6 (nicht löschen): So ändern, dass vorgemerkte
+        // DONE für Aufgabenblatt 6 (nicht löschen): So ändern, dass vorgemerkte
         // Medien nur vom ersten Vormerker ausgeliehen werden können, gemäß
         // Anforderung d).
-        boolean ausleiheMoeglich = (kunde != null) && !medien.isEmpty()
-                && _verleihService.sindAlleNichtVerliehen(medien);
 
-        return ausleiheMoeglich;
+        boolean istErsterVormerker = true;
+        for (Medium medium : medien)
+        {
+            Queue<Kunde> vormerker = _vormerkService.getVormerkerFuer(medium);
+            Kunde entleiher = _verleihService.istVerliehen(medium) ? _verleihService.getEntleiherFuer(medium) : null;
+
+            istErsterVormerker &= vormerker.size() == 0 || vormerker.peek().equals(entleiher);
+        }
+
+        return (kunde != null) && !medien.isEmpty()
+                && _verleihService.sindAlleNichtVerliehen(medien) && istErsterVormerker;
     }
 
     /**
