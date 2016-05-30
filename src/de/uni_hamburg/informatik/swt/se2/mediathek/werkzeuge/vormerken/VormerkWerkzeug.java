@@ -4,6 +4,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 
 import javax.swing.JPanel;
 
@@ -220,18 +221,21 @@ public class VormerkWerkzeug
 
         boolean vormerkerVoll = false;
         List<Kunde> alleAusleiher = new ArrayList<>();
+        List<Kunde> alleVormerker = new ArrayList<>();
 
         for (Medium medium : medien)
         {
-            int anzahlVormerker = _vormerkService.getVormerkerFuer(medium).size();
-            vormerkerVoll |= anzahlVormerker > 3;
+            Queue<Kunde> vormerker = _vormerkService.getVormerkerFuer(medium);
+            alleVormerker.addAll(vormerker);
+            int anzahlVormerker = vormerker.size();
+            vormerkerVoll |= anzahlVormerker >= 3;
 
             boolean istVerliehen = _verleihService.istVerliehen(medium);
             Kunde ausleiher = istVerliehen ? _verleihService.getEntleiherFuer(medium) : null;
             if (ausleiher != null) alleAusleiher.add(ausleiher);
         }
 
-        boolean vormerkenMoeglich = (kunde != null) && !alleAusleiher.contains(kunde) && !medien.isEmpty() && !vormerkerVoll;
+        boolean vormerkenMoeglich = (kunde != null) && !alleAusleiher.contains(kunde) && !alleVormerker.contains(kunde) && !medien.isEmpty() && !vormerkerVoll;
 
         return vormerkenMoeglich;
     }

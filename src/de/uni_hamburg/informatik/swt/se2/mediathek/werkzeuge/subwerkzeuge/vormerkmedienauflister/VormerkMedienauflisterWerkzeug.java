@@ -93,7 +93,7 @@ public class VormerkMedienauflisterWerkzeug extends ObservableSubWerkzeug
             //Kunde entleiher = _verleihService.getEntleiherFuer(medium);
             Kunde entleiher = _verleihService.istVerliehen(medium) ? _verleihService.getEntleiherFuer(medium) : null;
 
-            Queue<Kunde> vormerkerKopie = _vormerkService.getVormerkerFuer(medium);
+            Queue<Kunde> vormerkerKopie = new LinkedList<>(_vormerkService.getVormerkerFuer(medium));
             Kunde vormerker1 = vormerkerKopie.poll();
             Kunde vormerker2 = vormerkerKopie.poll();
             Kunde vormerker3 = vormerkerKopie.poll();
@@ -140,6 +140,7 @@ public class VormerkMedienauflisterWerkzeug extends ObservableSubWerkzeug
         };
         _medienbestand.registriereBeobachter(beobachter);
         _verleihService.registriereBeobachter(beobachter);
+        _vormerkService.registriereBeobachter(beobachter);
     }
 
     /**

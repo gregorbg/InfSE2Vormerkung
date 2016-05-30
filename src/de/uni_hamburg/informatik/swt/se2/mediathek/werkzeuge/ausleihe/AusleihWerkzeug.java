@@ -225,9 +225,9 @@ public class AusleihWerkzeug
         for (Medium medium : medien)
         {
             Queue<Kunde> vormerker = _vormerkService.getVormerkerFuer(medium);
-            Kunde entleiher = _verleihService.istVerliehen(medium) ? _verleihService.getEntleiherFuer(medium) : null;
+            Kunde ersterVormerker = vormerker.peek();
 
-            istErsterVormerker &= vormerker.size() == 0 || vormerker.peek().equals(entleiher);
+            istErsterVormerker &= vormerker.size() == 0 || ersterVormerker.equals(kunde);
         }
 
         return (kunde != null) && !medien.isEmpty()
@@ -247,6 +247,7 @@ public class AusleihWerkzeug
         {
             Datum heute = Datum.heute();
             _verleihService.verleiheAn(selectedKunde, selectedMedien, heute);
+            _vormerkService.entferneVormerkung(selectedKunde, selectedMedien);
         }
         catch (ProtokollierException exception)
         {
